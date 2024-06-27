@@ -1,0 +1,222 @@
+﻿@{
+    string Title = "Purchase Orders";
+    ViewData["Title"] = Title;
+    //ViewBag.BodyClass = "sidebar-collapse";
+
+    bool HideFilter = false;
+}
+@section Styles {
+    <link href="~/adminlte/components/bootstrap-datepicker/dist/css/bootstrap-datepicker3.min.css" rel="stylesheet" />
+    <link href="~/adminlte/components/datatable1.13/css/jquery.datatables.min.css" rel="stylesheet" />
+}
+<!-- Content Wrapper. Contains page content -->
+<div class="content-wrapper">
+    <!-- Main content -->
+    <section class="content">
+        <!-- Default box -->
+        <div class="box box-success">
+            <div class="box-header with-border">
+                <h3 class="box-title text-primary"><i class="fa-solid fa-cart-shopping"></i>&nbsp;@ViewData["Title"]</h3>
+                <!-- tools box -->
+                <div class="pull-right box-tools">
+                    <a href="@Url.Action("Add")" class="btn btn-sm btn-success"><i class="fa-solid fa-plus"></i>&nbsp;Add New Order</a>
+                </div>
+                <!-- /. tools -->
+            </div>
+            <div class="box-body">
+                @TempData["ProcessStatus"]
+                <div class="@(HideFilter ? "hidden" : "")">
+                    <div class="row">
+                        <div class="col-md-2">
+                            <label for="SearchCol">Search By:</label>
+                            <select class="form-control" name="SearchCol" id="SearchCol">
+                                <option value="Any">Any</option>
+                                <option value="PONo">PO#</option>
+                                <option value="VendorName">Vendor</option>
+                                <option value="Alias">Guild</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="SearchText">Search Text:</label>
+                            <input type="text" class="form-control" name="SearchText" id="SearchText" placeholder="Search..." />
+                        </div>
+
+                        <div class="col-md-2">
+                            <label for="BetweenCol">Search By Date:</label>
+                            <select class="form-control" name="BetweenCol" id="BetweenCol">
+                                <option value="Any">Any</option>
+                                <option value="OrderDate">Order Date</option>
+                                <option value="CreatedOn">Created On</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label for="StartDate">Start Date:</label>
+                            <input type="text" class="form-control select-date" name="StartDate" id="StartDate"
+                                   value="@string.Format("{0:yyyy-MM-dd}", DateTime.Now.AddMonths(-1))" readonly />
+                            <span id="error_StartDate" class="error" style="display:none"></span>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="EndDate">End Date:</label>
+                            <input type="text" class="form-control select-date" name="EndDate" id="EndDate"
+                                   value="@string.Format("{0:yyyy-MM-dd}",DateTime.Now.AddDays(1))" readonly />
+                            <span id="error_EndDate" class="error" style="display:none"></span>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label for="Status">Search Status:</label>
+                            <select class="form-control" name="Status" id="Status">
+                                <option value="Any" selected>Any</option>
+                                <option value="IsPaymentDone">Payment Complete</option>
+                                <option value="IsPaymentNotDone">Payment Due</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row margin-top-lg">
+                        <div class="col-md-2 text-right pull-right">
+                            <button id="btnFilter" class="btn btn-sm btn-primary"><i class="fa fa-filter"></i>&nbsp;Filter</button>
+                            <button id="btnClear" class="btn btn-sm btn-danger"><i class="fa fa-times"></i>&nbsp;Clear</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive margin-top-lg ajax-container">
+                    <table id="filterTable" class="table table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th class="not-sortable" style="width:30px">S.No.</th>
+                                <th>PurchaseOrderId</th>
+                                <th>PO#</th>
+                                <th>Guild</th>
+                                <th>Date</th>
+                                <th>Vendor</th>
+                                <th>Fine Weight</th>
+                                <th>Total</th>
+                                <th>Payment Due</th>
+                                <th>Balance</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+            <div class="overlay" style="display:none;">
+                <i class="fa fa-solid fa-spinner fa-spin"></i>
+            </div>
+            <!-- /.box-body -->
+        </div>
+        <!-- /.box -->
+    </section>
+    <!-- /.content -->
+</div>
+<!-- /.content-wrapper -->
+@section Scripts {
+    <script src="~/adminlte/components/bootstrap-datepicker/dist/js/bootstrap-datepicker.min.js"></script>
+    <script src="~/adminlte/components/moment/min/moment.min.js"></script>
+    <script src="~/adminlte/components/datatable1.13/js/jquery.datatables.min.js"></script>
+    <script>
+        $(document).ready(function () {
+
+            $(".select-date").datepicker({
+                format: "yyyy-mm-dd",
+                todayBtn: "linked",
+                todayHighlight: true,
+                autoclose: true
+            });
+            var overlay = $('.overlay');
+            var dataTable = $('#filterTable')
+                .on('preXhr.dt', () => overlay.show()).DataTable({
+                    serverSide: true,
+                    ordering: true,
+                    paging: true,
+                    language: { emptyTable: "No data available in the table" },
+                    ajax: {
+                        "url": "/api/PurchaseOrder/Filter",
+                        "type": "POST",
+                        "data": function (d) {
+                            d.SearchCol = $("#SearchCol option:selected").val();
+                            d.SearchText = $("#SearchText").val();
+                            d.BetweenCol = $("#BetweenCol option:selected").val();
+                            d.StartDate = $("#StartDate").val();
+                            d.EndDate = $("#EndDate").val();
+                            d.Status = $("#Status option:selected").val();
+                        },
+                        error: function (jqXHR, textStatus, errorThrown) {
+                            // Do something here
+                            alert("Error Occured " + errorThrown);
+                        }
+                    },
+                    columns: [
+                        { "data": "RowNum", "name": "S.No.", "orderable": false },
+                        { "data": "PurchaseOrderId", "name": "Id", "visible": false },
+                        {
+                            data: 'PurchaseOrderNo', title: 'PO #',
+                            render: function (data, type, row) {
+                                return '<a href="/PurchaseOrder/Details/' + row.PurchaseOrderId + '">' + data + '</a>';
+                            }
+                        },
+                        { "data": "Alias", "name": "Guild" },
+                        {
+                            data: 'OrderDate', title: 'Date',
+                            render: function (data, type, row) {
+                                return moment(data).format('DD-MMM-YYYY');
+                            }
+                        },
+                        { data: 'VendorName', title: 'Vendor' },
+                        {
+                            data: 'TotalFineWeight', title: 'Fine Weight',
+                            render: function (data, type, row) {
+                                return $.fn.Suffix(" gm", data);
+                            }
+                        },
+                        {
+                            data: 'TotalAmount', title: 'Order Amount',
+                            render: function (data, type, row) {
+                                return $.fn.Money(row.CurrencyCode, data);
+                            }
+                        },
+                        {
+                            data: 'IsPaymentDone', title: 'Payment Due',
+                            render: function (data, type, row) {
+                                return data == true ? '<small class="label bg-green">No</small>' : '<small class="label bg-red">Yes</small>';
+                            }
+                        },
+                        {
+                            data: 'CashBalance', title: 'Balance',
+                            render: function (data, type, row) {
+                                if (row.IsPaymentDone)
+                                    return '<small class="label bg-green">Nil</small>';
+                                else
+                                    return $.fn.Suffix('gm', row.GoldBalance) + ' worth of <b>' + $.fn.Money(row.CurrencyCode, data) + '</b>';
+                            }
+                        }
+                    ],
+                    order: [2, "desc"],
+                    drawCallback: function (settings) {
+                        $('body').tooltip({ selector: '[data-toggle="tooltip"]', container: "body" });
+                    },
+                    responsive: true,
+                    dom: 'lrtip'
+                });
+
+            // Enable the button when DataTable has finished processing (loaded)
+            dataTable.on('xhr.dt', function () {
+                overlay.hide();
+            });
+
+            $("#btnFilter").on("click", function () {
+                dataTable.draw();
+            });
+
+            $("#btnClear").on("click", function () {
+                $("#SearchCol").val($("#SearchCol option:first").val());
+                $("#BetweenCol").val($("#BetweenCol option:first").val());
+                $("#Status").val($("#Status option:first").val());
+                $("#SearchText").val("");
+                $("#StartDate").val("@string.Format("{0:yyyy-MM-dd}", DateTime.Now)");
+                $("#EndDate").val("@string.Format("{0:yyyy-MM-dd}", DateTime.Now.AddDays(1))");
+                dataTable.draw();
+            });
+        });
+    </script>
+}
